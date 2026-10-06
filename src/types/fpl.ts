@@ -50,10 +50,17 @@ export interface FPLData {
 
 export interface Fixture {
   id: number;
-  event: number;
+  event: number | null;
   team_h: number;
   team_a: number;
   team_h_difficulty: number;
   team_a_difficulty: number;
-  kickoff_time: string;
+  kickoff_time: string | null;
+  finished: boolean;
+}
+
+export interface DashboardData {
+  data: FPLData;
+  fixtures: Fixture[];
+  isMock: boolean;
 }
