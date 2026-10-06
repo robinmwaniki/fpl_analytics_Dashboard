@@ -5,7 +5,9 @@ import {
   ChevronRight,
   CircleAlert,
   CircleCheck,
+  Crown,
   Flame,
+  Gem,
   RefreshCw,
   Search,
   Shield,
@@ -14,10 +16,14 @@ import {
   Users,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
-import type { DashboardData, ElementType, Fixture, Player, Team } from './types/fpl';
+import type { DashboardData, ElementType, Player, Team } from './types/fpl';
 import { loadDashboardData } from './services/fplService';
+import CaptainPicker from './components/CaptainPicker';
+import ValueFinder from './components/ValueFinder';
+import { DIFFICULTY_STYLES, getStartGameweek, toFixtureCell } from './lib/fixtures';
+import { formatPrice } from './lib/format';
 
-type TabId = 'overview' | 'explorer' | 'compare' | 'fdr';
+type TabId = 'overview' | 'explorer' | 'compare' | 'fdr' | 'captain' | 'value';
 type SortKey = 'total_points' | 'now_cost' | 'form' | 'goals_scored' | 'assists';
 
 const TABS: { id: TabId; label: string; icon: LucideIcon }[] = [
@@ -25,40 +31,12 @@ const TABS: { id: TabId; label: string; icon: LucideIcon }[] = [
   { id: 'explorer', label: 'Player Explorer', icon: Search },
   { id: 'compare', label: 'Compare Players', icon: ArrowUpDown },
   { id: 'fdr', label: 'FDR Planner', icon: Shield },
+  { id: 'captain', label: 'Captain Picker', icon: Crown },
+  { id: 'value', label: 'Value Finder', icon: Gem },
 ];
 
 const FDR_WINDOW = 5;
 const EXPLORER_ROW_LIMIT = 100;
-
-const DIFFICULTY_STYLES: Record<number, string> = {
-  1: 'bg-emerald-400 text-slate-950 font-extrabold',
-  2: 'bg-emerald-500 text-slate-950 font-extrabold',
-  3: 'bg-slate-700 text-white',
-  4: 'bg-amber-500 text-slate-950 font-bold',
-  5: 'bg-rose-600 text-white font-bold',
-};
-
-const formatPrice = (nowCost: number): string => `£${(nowCost / 10).toFixed(1)}m`;
-
-interface FdrCell {
-  fixtureId: number;
-  event: number;
-  opponent: string;
-  isHome: boolean;
-  difficulty: number;
-}
-
-function toFdrCell(fixture: Fixture, teamId: number, teamMap: Map<number, Team>): FdrCell {
-  const isHome = fixture.team_h === teamId;
-  const opponentId = isHome ? fixture.team_a : fixture.team_h;
-  return {
-    fixtureId: fixture.id,
-    event: fixture.event ?? 0,
-    opponent: teamMap.get(opponentId)?.short_name ?? '???',
-    isHome,
-    difficulty: isHome ? fixture.team_h_difficulty : fixture.team_a_difficulty,
-  };
-}
 
 export default function App() {
   const [dashboard, setDashboard] = useState<DashboardData | null>(null);
@@ -138,10 +116,7 @@ export default function App() {
   const fdrRows = useMemo(() => {
     if (!fplData || !fixtures) return [];
 
-    const startGw =
-      fplData.events.find((e) => e.is_next)?.id ??
-      fplData.events.find((e) => !e.finished)?.id ??
-      1;
+    const startGw = getStartGameweek(fplData.events);
     const endGw = startGw + FDR_WINDOW - 1;
 
     const upcoming = fixtures
@@ -152,7 +127,7 @@ export default function App() {
       .map((team) => {
         const cells = upcoming
           .filter((f) => f.team_h === team.id || f.team_a === team.id)
-          .map((f) => toFdrCell(f, team.id, teamMap));
+          .map((f) => toFixtureCell(f, team.id, teamMap));
         const average =
           cells.length > 0 ? cells.reduce((sum, c) => sum + c.difficulty, 0) / cells.length : null;
         return { team, cells, average };
@@ -449,6 +424,27 @@ export default function App() {
           </div>
         )}
 
+        {activeTab === 'captain' && (
+          <CaptainPicker
+            players={fplData.elements}
+            events={fplData.events}
+            fixtures={dashboard.fixtures}
+            teamMap={teamMap}
+            posMap={posMap}
+            onSelect={setSelectedPlayer}
+          />
+        )}
+
+        {activeTab === 'value' && (
+          <ValueFinder
+            players={fplData.elements}
+            elementTypes={fplData.element_types}
+            teamMap={teamMap}
+            posMap={posMap}
+            onSelect={setSelectedPlayer}
+          />
+        )}
+
         {activeTab === 'fdr' && (
           <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6">
             <h2 className="text-lg font-bold text-white mb-2">Fixture Difficulty Rating (FDR) Planner</h2>
@@ -463,36 +459,36 @@ export default function App() {
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-sm text-slate-300">
                   <thead className="text-xs uppercase bg-slate-950 text-slate-400">
-                    <tr>
-                      <th className="p-3">Team</th>
-                      <th className="p-3 text-center">Next {FDR_WINDOW} GWs</th>
-                      <th className="p-3 text-right">Avg</th>
-                    </tr>
+                  <tr>
+                    <th className="p-3">Team</th>
+                    <th className="p-3 text-center">Next {FDR_WINDOW} GWs</th>
+                    <th className="p-3 text-right">Avg</th>
+                  </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-800">
-                    {fdrRows.map(({ team, cells, average }) => (
-                      <tr key={team.id} className="hover:bg-slate-800/40">
-                        <td className="p-3 font-bold text-white">{team.name}</td>
-                        <td className="p-3">
-                          <div className="flex gap-2 justify-center flex-wrap">
-                            {cells.map((cell) => (
-                              <span
-                                key={cell.fixtureId}
-                                title={`GW ${cell.event}: ${cell.opponent} (${cell.isHome ? 'H' : 'A'}), difficulty ${cell.difficulty}`}
-                                className={`min-w-14 px-2 h-8 rounded-lg flex items-center justify-center text-xs ${
-                                  DIFFICULTY_STYLES[cell.difficulty] ?? DIFFICULTY_STYLES[3]
-                                }`}
-                              >
+                  {fdrRows.map(({ team, cells, average }) => (
+                    <tr key={team.id} className="hover:bg-slate-800/40">
+                      <td className="p-3 font-bold text-white">{team.name}</td>
+                      <td className="p-3">
+                        <div className="flex gap-2 justify-center flex-wrap">
+                          {cells.map((cell) => (
+                            <span
+                              key={cell.fixtureId}
+                              title={`GW ${cell.event}: ${cell.opponent} (${cell.isHome ? 'H' : 'A'}), difficulty ${cell.difficulty}`}
+                              className={`min-w-14 px-2 h-8 rounded-lg flex items-center justify-center text-xs ${
+                                DIFFICULTY_STYLES[cell.difficulty] ?? DIFFICULTY_STYLES[3]
+                              }`}
+                            >
                                 {cell.isHome ? cell.opponent.toUpperCase() : cell.opponent.toLowerCase()}
                               </span>
-                            ))}
-                          </div>
-                        </td>
-                        <td className="p-3 text-right font-semibold text-slate-200">
-                          {average === null ? '–' : average.toFixed(1)}
-                        </td>
-                      </tr>
-                    ))}
+                          ))}
+                        </div>
+                      </td>
+                      <td className="p-3 text-right font-semibold text-slate-200">
+                        {average === null ? '–' : average.toFixed(1)}
+                      </td>
+                    </tr>
+                  ))}
                   </tbody>
                 </table>
               </div>
@@ -619,39 +615,39 @@ function PlayerTable({ players, teamMap, posMap, onSelect }: PlayerTableProps) {
     <div className="overflow-x-auto">
       <table className="w-full text-left text-sm text-slate-300">
         <thead className="text-xs uppercase bg-slate-950 text-slate-400 border-b border-slate-800">
-          <tr>
-            <th className="p-3">Player</th>
-            <th className="p-3">Team</th>
-            <th className="p-3">Pos</th>
-            <th className="p-3">Price</th>
-            <th className="p-3">Form</th>
-            <th className="p-3 text-right">Points</th>
-          </tr>
+        <tr>
+          <th className="p-3">Player</th>
+          <th className="p-3">Team</th>
+          <th className="p-3">Pos</th>
+          <th className="p-3">Price</th>
+          <th className="p-3">Form</th>
+          <th className="p-3 text-right">Points</th>
+        </tr>
         </thead>
         <tbody className="divide-y divide-slate-800/60">
-          {players.map((p) => (
-            <tr
-              key={p.id}
-              tabIndex={0}
-              onClick={() => onSelect(p)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                  e.preventDefault();
-                  onSelect(p);
-                }
-              }}
-              className="hover:bg-slate-800/40 focus:bg-slate-800/40 focus:outline-none cursor-pointer transition"
-            >
-              <td className="p-3 font-semibold text-white">
-                {p.first_name} {p.second_name}
-              </td>
-              <td className="p-3 text-slate-400">{teamMap.get(p.team)?.short_name}</td>
-              <td className="p-3 text-slate-400">{posMap.get(p.element_type)?.singular_name_short}</td>
-              <td className="p-3">{formatPrice(p.now_cost)}</td>
-              <td className="p-3 text-cyan-400 font-medium">{p.form}</td>
-              <td className="p-3 text-right font-bold text-emerald-400">{p.total_points}</td>
-            </tr>
-          ))}
+        {players.map((p) => (
+          <tr
+            key={p.id}
+            tabIndex={0}
+            onClick={() => onSelect(p)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                onSelect(p);
+              }
+            }}
+            className="hover:bg-slate-800/40 focus:bg-slate-800/40 focus:outline-none cursor-pointer transition"
+          >
+            <td className="p-3 font-semibold text-white">
+              {p.first_name} {p.second_name}
+            </td>
+            <td className="p-3 text-slate-400">{teamMap.get(p.team)?.short_name}</td>
+            <td className="p-3 text-slate-400">{posMap.get(p.element_type)?.singular_name_short}</td>
+            <td className="p-3">{formatPrice(p.now_cost)}</td>
+            <td className="p-3 text-cyan-400 font-medium">{p.form}</td>
+            <td className="p-3 text-right font-bold text-emerald-400">{p.total_points}</td>
+          </tr>
+        ))}
         </tbody>
       </table>
     </div>
