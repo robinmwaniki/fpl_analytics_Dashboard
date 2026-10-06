@@ -1,0 +1,13 @@
+@import 'tailwindcss';
+
+@theme {
+  --color-fpl-dark: #37003c;
+  --color-fpl-green: #00ff87;
+  --color-fpl-pink: #e90052;
+  --color-fpl-cyan: #04f5ff;
+  --color-fpl-bg: #0f172a;
+}
+
+body {
+  margin: 0;
+}
