@@ -31,6 +31,8 @@ export interface Player {
   ep_next: string;
   news: string;
   status: string;
+  /** Percentage chance of playing next round; null when FPL has no flag for the player. */
+  chance_of_playing_next_round?: number | null;
 }
 
 export interface Event {

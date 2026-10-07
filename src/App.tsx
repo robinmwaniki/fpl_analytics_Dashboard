@@ -13,21 +13,24 @@ import {
   Shield,
   Sparkles,
   Trophy,
+  UserRound,
   Users,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import type { DashboardData, ElementType, Player, Team } from './types/fpl';
 import { loadDashboardData } from './services/fplService';
 import CaptainPicker from './components/CaptainPicker';
+import MyTeam from './components/MyTeam';
 import ValueFinder from './components/ValueFinder';
 import { DIFFICULTY_STYLES, getStartGameweek, toFixtureCell } from './lib/fixtures';
 import { formatPrice } from './lib/format';
 
-type TabId = 'overview' | 'explorer' | 'compare' | 'fdr' | 'captain' | 'value';
+type TabId = 'overview' | 'myteam' | 'explorer' | 'compare' | 'fdr' | 'captain' | 'value';
 type SortKey = 'total_points' | 'now_cost' | 'form' | 'goals_scored' | 'assists';
 
 const TABS: { id: TabId; label: string; icon: LucideIcon }[] = [
   { id: 'overview', label: 'Dashboard Overview', icon: Activity },
+  { id: 'myteam', label: 'My Team', icon: UserRound },
   { id: 'explorer', label: 'Player Explorer', icon: Search },
   { id: 'compare', label: 'Compare Players', icon: ArrowUpDown },
   { id: 'fdr', label: 'FDR Planner', icon: Shield },
@@ -422,6 +425,17 @@ export default function App() {
               />
             </div>
           </div>
+        )}
+
+        {activeTab === 'myteam' && (
+          <MyTeam
+            data={fplData}
+            fixtures={dashboard.fixtures}
+            isMock={isMock}
+            teamMap={teamMap}
+            posMap={posMap}
+            onSelect={setSelectedPlayer}
+          />
         )}
 
         {activeTab === 'captain' && (
