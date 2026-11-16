@@ -21,7 +21,7 @@ The dashboard requests public Fantasy Premier League data through a same-origin 
 
 ## Architecture
 
-```mermaid
+~~~mermaid
 flowchart TD
     USER[Browser] --> UI[React + TypeScript Dashboard]
     UI --> API[Same-origin API Routes]
@@ -31,11 +31,11 @@ flowchart TD
     PROXY --> UI
     UI --> MOCK[Bundled Mock Data]
     API -. unavailable or invalid response .-> MOCK
-```
+~~~
 
 ### Data request flow
 
-```mermaid
+~~~mermaid
 sequenceDiagram
     participant UI as Dashboard
     participant Proxy as /api/fpl Proxy
@@ -49,7 +49,7 @@ sequenceDiagram
     FPL-->>Proxy: Fixture payload
     Proxy-->>UI: Fixture data
     Note over UI: Use bundled mock data if live data is unavailable.
-```
+~~~
 
 ## Technology stack
 
@@ -74,35 +74,35 @@ sequenceDiagram
 
 ### 1. Clone and install
 
-```bash
+~~~bash
 git clone https://github.com/robinmwaniki/fpl_analytics_Dashboard.git
 cd fpl_analytics_Dashboard
 npm install
-```
+~~~
 
 ### 2. Run locally
 
-```bash
+~~~bash
 npm run dev
-```
+~~~
 
 Open the local URL printed by Vite, normally [http://localhost:5173](http://localhost:5173). The Vite configuration proxies supported requests to the public FPL API during development.
 
 ### 3. Build and validate
 
-```bash
+~~~bash
 npm run typecheck
 npm run lint
 npm run build
 npm run preview
-```
+~~~
 
 ## Data sources and fallback behavior
 
 | Client request | Upstream endpoint |
 | --- | --- |
-| `/api/fpl/bootstrap-static` | `https://fantasy.premierleague.com/api/bootstrap-static/` |
-| `/api/fpl/fixtures` | `https://fantasy.premierleague.com/api/fixtures/` |
+| /api/fpl/bootstrap-static | https://fantasy.premierleague.com/api/bootstrap-static/ |
+| /api/fpl/fixtures | https://fantasy.premierleague.com/api/fixtures/ |
 
 The Vercel function allows only the configured endpoint names and applies a short shared-cache policy to successful responses. The local Vite proxy mirrors the production routing behavior.
 
@@ -112,20 +112,20 @@ The repository also contains a local proxy for manager team picks. Production av
 
 ## Deployment
 
-The repository includes Vercel Function code under `api/`.
+The repository includes Vercel Function code under api/.
 
 1. Import the repository into Vercel.
 2. Select the Vite framework preset.
-3. Set the build command to `npm run build`.
-4. Set the output directory to `dist`.
-5. Keep the root-level `api/` directory so Vercel can detect the serverless functions.
-6. Deploy and verify the dashboard and `/api/fpl/` endpoints.
+3. Set the build command to npm run build.
+4. Set the output directory to dist.
+5. Keep the root-level api/ directory so Vercel can detect the serverless functions.
+6. Deploy and verify the dashboard and /api/fpl/ endpoints.
 
 The current public endpoints do not require an API key. Upstream availability and response formats can change independently of this project.
 
 ## Project structure
 
-```text
+~~~text
 .
 ├── api/
 │   ├── fpl/             # Server-side FPL API proxy
@@ -139,7 +139,7 @@ The current public endpoints do not require an API key. Upstream availability an
 ├── index.html
 ├── package.json
 └── vite.config.ts
-```
+~~~
 
 ## Disclaimer
 
