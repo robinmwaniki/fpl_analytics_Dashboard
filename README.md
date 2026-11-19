@@ -11,7 +11,8 @@ The dashboard requests public Fantasy Premier League data through a same-origin 
 - FPL overview with gameweek and player information.
 - Player explorer with search, team and position filters.
 - Sorting by total points, price, form, goals, and assists.
-- Player detail view and head-to-head comparison.
+- Player detail view with on-demand gameweek history and performance trends.
+- Head-to-head player comparison.
 - My Team view using manager team-pick data.
 - Captain selection helper.
 - Value finder.
@@ -129,10 +130,11 @@ The current public endpoints do not require an API key. Upstream availability an
 .
 ├── api/
 │   ├── fpl/             # Server-side FPL API proxy
-│   └── team-picks.ts    # Manager team-picks proxy
+│   ├── team-picks.ts    # Manager team-picks proxy
+│   └── player-history.ts # Selected-player history proxy
 ├── src/
 │   ├── components/      # Dashboard UI components
-│   ├── services/        # FPL and manager data access
+│   ├── services/        # FPL, manager and player-history data access
 │   ├── types/           # FPL domain types
 │   ├── App.tsx          # Dashboard views and state
 │   └── main.tsx         # React entry point
