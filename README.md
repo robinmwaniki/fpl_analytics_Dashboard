@@ -14,7 +14,7 @@ A Fantasy Premier League analytics dashboard built with **React, TypeScript, and
 
 ## Overview
 
-The dashboard requests public Fantasy Premier League data through same-origin API routes. Cloudflare Pages Functions proxy supported requests to the FPL API, avoiding browser cross-origin restrictions and limiting the upstream endpoints exposed to the client. If live data cannot be loaded, the application falls back to bundled mock data so the interface remains explorable.
+The dashboard requests public Fantasy Premier League data through same-origin API routes. Cloudflare Workers or Cloudflare Pages Functions proxy supported requests to the FPL API, avoiding browser cross-origin restrictions and limiting the upstream endpoints exposed to the client. If live data cannot be loaded, the application falls back to bundled mock data so the interface remains explorable.
 
 ## Features
 
@@ -46,8 +46,8 @@ The dashboard requests public Fantasy Premier League data through same-origin AP
 ```mermaid
 flowchart TD
     USER[Browser] --> UI[React + TypeScript Dashboard]
-    UI --> PAGES[Cloudflare Pages]
-    PAGES --> FN[Cloudflare Pages Functions]
+    UI --> CF[Cloudflare Workers or Pages]
+    CF --> FN[Worker fetch handler or Pages Functions]
     FN --> FPL[Fantasy Premier League Public API]
     FPL --> FN
     FN --> UI
@@ -84,8 +84,8 @@ sequenceDiagram
 | Icons | lucide-react |
 | Data source | Public Fantasy Premier League API |
 | Local proxy | Vite dev-server proxy |
-| Production hosting | Cloudflare Pages |
-| Production API | Cloudflare Pages Functions |
+| Production hosting | Cloudflare Workers or Pages |
+| Production API | Cloudflare Worker / Pages Functions |
 | Quality tools | TypeScript, ESLint, Node.js test runner |
 
 ## Getting started
@@ -133,58 +133,67 @@ npm run preview
 | `/api/league-standings?id=123&page=1` | `https://fantasy.premierleague.com/api/leagues-classic/123/standings/?page_standings=1` |
 | `/api/team-picks?id=123&gw=1` | `https://fantasy.premierleague.com/api/entry/123/event/1/picks/` |
 
-All production API routes validate user-supplied identifiers before constructing fixed upstream paths. Successful responses use short shared-cache headers; upstream failures return safe error responses without caching. The `public/_routes.json` file directs only `/api/*` requests to Pages Functions, leaving static assets on Cloudflare's CDN.
+All production API routes validate user-supplied identifiers before constructing fixed upstream paths. Successful responses use short shared-cache headers; upstream failures return safe error responses without caching. For Cloudflare Pages, `public/_routes.json` directs only `/api/*` requests to Pages Functions. For a `workers.dev` deployment, `wrangler.toml` configures the `worker.ts` entrypoint and routes `/api/*` through the Worker while serving the Vite `dist/` assets through the `ASSETS` binding.
 
 If live bootstrap data is unavailable or does not match the expected shape, the dashboard uses bundled mock data and generated mock fixtures. Mock data is illustrative and must not be interpreted as current FPL statistics.
 
-The Vite development proxy mirrors the same public API paths for local development. The original Vercel handlers under `api/` are retained temporarily as a migration fallback; Cloudflare Pages uses the new handlers under `functions/`.
+The Vite development proxy mirrors the same public API paths for local development. The original Vercel handlers under `api/` are retained temporarily as a migration fallback. Both Cloudflare deployment modes reuse the validated handlers under `functions/`: Pages calls them through its function runtime, while `worker.ts` dispatches the same handlers for a standalone Worker.
 
-## Deployment — Cloudflare Pages
+## Deployment — Cloudflare Workers (workers.dev)
 
-Cloudflare Pages is the primary production target. The repository is prepared for Git-based deployment, including the Pages Functions API routes.
+Use this deployment path when the production hostname ends in `workers.dev`. This repository includes a standalone Worker entrypoint and `wrangler.toml`; Pages Functions alone are not a standalone Workers runtime.
 
-1. Sign in to the [Cloudflare Dashboard](https://dash.cloudflare.com/) and open **Workers & Pages**.
-2. Select **Create application → Pages → Connect to Git**.
-3. Authorize GitHub and select `robinmwaniki/fpl_analytics_Dashboard`.
-4. Set the production branch to `master`. Keep `develop` as a preview branch if desired.
-5. Use these build settings:
+In Cloudflare **Workers & Pages → Workers**, connect the GitHub repository and configure the build:
 
-   | Setting | Value |
-   | --- | --- |
-   | Framework preset | Vite |
-   | Production branch | `master` |
-   | Build command | `npm run build` |
-   | Build output directory | `dist` |
-   | Root directory | `/` |
-   | Environment variables | None required |
+| Setting | Value |
+| --- | --- |
+| Production branch | `master` |
+| Build command | `npm run build` |
+| Deploy command | `npx wrangler@4 deploy` |
+| Root directory | `/` |
+| Worker configuration | `wrangler.toml` |
 
-6. Save and deploy. Cloudflare detects the root-level `functions/` directory and deploys its API handlers alongside the static build. Keep `functions/` at the repository root; it must not be moved inside `public/` or `dist/`.
-7. After deployment, open the generated `*.pages.dev` URL and verify the dashboard plus the API smoke tests below.
+The Wrangler configuration serves `dist/` as static assets, uses the `ASSETS` binding, and invokes `worker.ts` first for `/api/*`. No FPL API key or secret is required. If Cloudflare asks for a Worker name, keep it consistent with `fpl-analytics-dashboard` in `wrangler.toml`.
 
-### Post-deployment smoke tests
+After deployment, verify these endpoints. The first two should return FPL JSON rather than the dashboard HTML document:
 
-Replace `YOUR-PROJECT.pages.dev` with the domain Cloudflare assigns:
+```bash
+curl -i https://YOUR-WORKER.workers.dev/
+curl -i https://YOUR-WORKER.workers.dev/api/fpl/bootstrap-static
+curl -i https://YOUR-WORKER.workers.dev/api/fpl/fixtures
+curl -i "https://YOUR-WORKER.workers.dev/api/player-history?id=1"
+```
+
+## Deployment — Cloudflare Pages (pages.dev)
+
+Pages remains supported. Create a Pages project connected to this repository and set:
+
+| Setting | Value |
+| --- | --- |
+| Production branch | `master` |
+| Build command | `npm run build` |
+| Build output directory | `dist` |
+| Root directory | `/` |
+
+Pages automatically discovers the root-level `functions/` directory. Keep it at the repository root; do not move it into `public/` or `dist/`. Cloudflare assigns a `*.pages.dev` hostname.
+
+For Pages, verify the site and API routes using:
 
 ```bash
 curl -i https://YOUR-PROJECT.pages.dev/
 curl -i https://YOUR-PROJECT.pages.dev/api/fpl/bootstrap-static
 curl -i https://YOUR-PROJECT.pages.dev/api/fpl/fixtures
-curl -i "https://YOUR-PROJECT.pages.dev/api/player-history?id=1"
-curl -i "https://YOUR-PROJECT.pages.dev/api/manager-profile?id=1"
-curl -i "https://YOUR-PROJECT.pages.dev/api/manager-history?id=1"
-curl -i "https://YOUR-PROJECT.pages.dev/api/league-standings?id=1&page=1"
-curl -i "https://YOUR-PROJECT.pages.dev/api/team-picks?id=1&gw=1"
 ```
 
-The FPL API may legitimately return `404` for an example player, manager, league, or gameweek. The important checks are that the Pages Function is reached, the response is JSON, and invalid IDs return `400` without contacting the upstream API.
-
-No API key or Cloudflare secret is required by the application. Git integration and the first deployment must be authorized in your Cloudflare account; this repository change alone cannot create or authorize a Cloudflare project.
+The FPL API may legitimately return `404` for example player, manager, league, or gameweek IDs. The important checks are that the API route is reached, responses are JSON, and invalid IDs return `400` without contacting the upstream API.
 
 ## Project structure
 
 ```text
 .
 ├── api/                      # Retained Vercel migration fallback
+├── worker.ts                 # Standalone Cloudflare Workers entrypoint
+├── wrangler.toml              # Worker + static asset routing configuration
 ├── functions/
 │   ├── _shared/
 │   │   └── fplProxy.ts       # Shared FPL upstream proxy
@@ -205,7 +214,7 @@ No API key or Cloudflare secret is required by the application. Git integration 
 │   ├── types/                # FPL and analytics domain types
 │   ├── App.tsx               # Dashboard views and state
 │   └── main.tsx              # React entry point
-├── tests/                    # Service and Pages Function tests
+├── tests/                    # Service, Pages Function and Worker tests
 ├── index.html
 └── vite.config.ts
 ```
