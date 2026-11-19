@@ -13,6 +13,5 @@ export async function onRequestGet(context: PagesContext): Promise<Response> {
     return Response.json({ error: 'Not found' }, { status: 404 });
   }
 
-  const cacheSeconds = endpoint === 'bootstrap-static' ? 300 : 300;
-  return proxyFpl(`/${endpoint}/`, { cacheSeconds, staleSeconds: 600 });
+  return proxyFpl(`/${endpoint}/`, { cacheSeconds: 300, staleSeconds: 600 });
 }
