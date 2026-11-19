@@ -2,6 +2,16 @@
 
 A Fantasy Premier League analytics dashboard built with **React, TypeScript, and Vite**. It transforms public FPL data into tools for exploring player statistics, comparing players, reviewing fixtures, and planning a squad.
 
+<p align="center">
+  <img src="docs/images/fpl-dashboard-overview.svg" alt="Illustrative preview of the FPL Analytics Dashboard" width="100%" />
+</p>
+
+<p align="center">
+  <strong>Explore player performance · Compare options · Plan fixtures · Track managers</strong>
+</p>
+
+> **Visual note:** The images in this README are conceptual illustrations created to showcase the product's intended workflows and feature areas. They are not screenshots captured from a running deployment, and sample names, values and charts shown in them are illustrative rather than live FPL data.
+
 ## Overview
 
 The dashboard requests public Fantasy Premier League data through a same-origin proxy. This avoids browser cross-origin restrictions and limits the upstream endpoints exposed to the client. If live data cannot be loaded, the application falls back to bundled mock data so the interface remains explorable.
@@ -20,6 +30,16 @@ The dashboard requests public Fantasy Premier League data through a same-origin 
 - Fixture Difficulty Rating (FDR) planner for upcoming gameweeks.
 - Live-data loading with offline mock-data fallback.
 - Responsive React interface styled with Tailwind CSS.
+
+### Feature previews
+
+<p align="center">
+  <img src="docs/images/fpl-analytics-features.svg" alt="Illustrative feature previews for player analytics, player comparison, fixture planning and manager analytics" width="100%" />
+</p>
+
+| Player analytics | Player comparison | Fixture planner | Manager analytics |
+| --- | --- | --- | --- |
+| Review player form, points and match history. | Compare player metrics side by side. | Assess upcoming opponents and fixture difficulty. | Follow manager rank history and mini-league standings. |
 
 ## Architecture
 
@@ -130,18 +150,20 @@ The current public endpoints do not require an API key. Upstream availability an
 ```text
 .
 ├── api/
-│   ├── fpl/             # Server-side FPL API proxy
-│   ├── team-picks.ts       # Manager team-picks proxy
-│   ├── player-history.ts   # Selected-player history proxy
-│   ├── manager-profile.ts   # Public manager profile proxy
-│   ├── manager-history.ts  # Public manager history proxy
-│   └── league-standings.ts # Paginated classic league proxy
+│   ├── fpl/                  # Server-side FPL API proxy
+│   ├── team-picks.ts         # Manager team-picks proxy
+│   ├── player-history.ts     # Selected-player history proxy
+│   ├── manager-profile.ts    # Public manager profile proxy
+│   ├── manager-history.ts    # Public manager history proxy
+│   └── league-standings.ts   # Paginated classic league proxy
+├── docs/
+│   └── images/               # README product illustrations
 ├── src/
-│   ├── components/      # Dashboard UI components
-│   ├── services/        # FPL, manager and player-history data access
-│   ├── types/           # FPL and analytics domain types
-│   ├── App.tsx          # Dashboard views and state
-│   └── main.tsx         # React entry point
+│   ├── components/           # Dashboard UI components
+│   ├── services/             # FPL, manager and player-history data access
+│   ├── types/                # FPL and analytics domain types
+│   ├── App.tsx               # Dashboard views and state
+│   └── main.tsx              # React entry point
 ├── index.html
 ├── package.json
 └── vite.config.ts
