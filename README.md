@@ -14,7 +14,7 @@ A Fantasy Premier League analytics dashboard built with **React, TypeScript, and
 
 ## Overview
 
-The dashboard requests public Fantasy Premier League data through a same-origin proxy. This avoids browser cross-origin restrictions and limits the upstream endpoints exposed to the client. If live data cannot be loaded, the application falls back to bundled mock data so the interface remains explorable.
+The dashboard requests public Fantasy Premier League data through same-origin API routes. Cloudflare Pages Functions proxy supported requests to the FPL API, avoiding browser cross-origin restrictions and limiting the upstream endpoints exposed to the client. If live data cannot be loaded, the application falls back to bundled mock data so the interface remains explorable.
 
 ## Features
 
@@ -46,13 +46,13 @@ The dashboard requests public Fantasy Premier League data through a same-origin 
 ```mermaid
 flowchart TD
     USER[Browser] --> UI[React + TypeScript Dashboard]
-    UI --> API[Same-origin API Routes]
-    API --> PROXY[Vercel Function or Vite Dev Proxy]
-    PROXY --> FPL[Fantasy Premier League Public API]
-    FPL --> PROXY
-    PROXY --> UI
+    UI --> PAGES[Cloudflare Pages]
+    PAGES --> FN[Cloudflare Pages Functions]
+    FN --> FPL[Fantasy Premier League Public API]
+    FPL --> FN
+    FN --> UI
     UI --> MOCK[Bundled Mock Data]
-    API -. unavailable or invalid response .-> MOCK
+    FN -. unavailable or invalid response .-> UI
 ```
 
 ### Data request flow
@@ -60,16 +60,16 @@ flowchart TD
 ```mermaid
 sequenceDiagram
     participant UI as Dashboard
-    participant Proxy as /api/fpl Proxy
+    participant FN as Pages Function
     participant FPL as FPL API
-    UI->>Proxy: GET /api/fpl/bootstrap-static
-    Proxy->>FPL: GET /api/bootstrap-static/
-    FPL-->>Proxy: JSON payload
-    Proxy-->>UI: Cached JSON response
-    UI->>Proxy: GET /api/fpl/fixtures
-    Proxy->>FPL: GET /api/fixtures/
-    FPL-->>Proxy: Fixture payload
-    Proxy-->>UI: Fixture data
+    UI->>FN: GET /api/fpl/bootstrap-static
+    FN->>FPL: GET /api/bootstrap-static/
+    FPL-->>FN: JSON payload
+    FN-->>UI: Cached JSON response
+    UI->>FN: GET /api/fpl/fixtures
+    FN->>FPL: GET /api/fixtures/
+    FPL-->>FN: Fixture payload
+    FN-->>UI: Fixture data
     Note over UI: Use bundled mock data if live data is unavailable.
 ```
 
@@ -84,8 +84,9 @@ sequenceDiagram
 | Icons | lucide-react |
 | Data source | Public Fantasy Premier League API |
 | Local proxy | Vite dev-server proxy |
-| Production proxy | Vercel Functions |
-| Quality tools | TypeScript, ESLint |
+| Production hosting | Cloudflare Pages |
+| Production API | Cloudflare Pages Functions |
+| Quality tools | TypeScript, ESLint, Node.js test runner |
 
 ## Getting started
 
@@ -115,6 +116,7 @@ Open the local URL printed by Vite, normally [http://localhost:5173](http://loca
 ```bash
 npm run typecheck
 npm run lint
+npm test
 npm run build
 npm run preview
 ```
@@ -125,37 +127,76 @@ npm run preview
 | --- | --- |
 | `/api/fpl/bootstrap-static` | `https://fantasy.premierleague.com/api/bootstrap-static/` |
 | `/api/fpl/fixtures` | `https://fantasy.premierleague.com/api/fixtures/` |
+| `/api/player-history?id=123` | `https://fantasy.premierleague.com/api/element-summary/123/` |
+| `/api/manager-profile?id=123` | `https://fantasy.premierleague.com/api/entry/123/` |
+| `/api/manager-history?id=123` | `https://fantasy.premierleague.com/api/entry/123/history/` |
+| `/api/league-standings?id=123&page=1` | `https://fantasy.premierleague.com/api/leagues-classic/123/standings/?page_standings=1` |
+| `/api/team-picks?id=123&gw=1` | `https://fantasy.premierleague.com/api/entry/123/event/1/picks/` |
 
-The Vercel function allows only the configured endpoint names and applies a short shared-cache policy to successful responses. The local Vite proxy mirrors the production routing behavior.
+All production API routes validate user-supplied identifiers before constructing fixed upstream paths. Successful responses use short shared-cache headers; upstream failures return safe error responses without caching. The `public/_routes.json` file directs only `/api/*` requests to Pages Functions, leaving static assets on Cloudflare's CDN.
 
 If live bootstrap data is unavailable or does not match the expected shape, the dashboard uses bundled mock data and generated mock fixtures. Mock data is illustrative and must not be interpreted as current FPL statistics.
 
-The repository also contains a local proxy for manager team picks. Production availability depends on the corresponding Vercel function being deployed with the project.
+The Vite development proxy mirrors the same public API paths for local development. The original Vercel handlers under `api/` are retained temporarily as a migration fallback; Cloudflare Pages uses the new handlers under `functions/`.
 
-## Deployment
+## Deployment — Cloudflare Pages
 
-The repository includes Vercel Function code under `api/`.
+Cloudflare Pages is the primary production target. The repository is prepared for Git-based deployment, including the Pages Functions API routes.
 
-1. Import the repository into Vercel.
-2. Select the Vite framework preset.
-3. Set the build command to `npm run build`.
-4. Set the output directory to `dist`.
-5. Keep the root-level `api/` directory so Vercel can detect the serverless functions.
-6. Deploy and verify the dashboard and `/api/fpl/` endpoints.
+1. Sign in to the [Cloudflare Dashboard](https://dash.cloudflare.com/) and open **Workers & Pages**.
+2. Select **Create application → Pages → Connect to Git**.
+3. Authorize GitHub and select `robinmwaniki/fpl_analytics_Dashboard`.
+4. Set the production branch to `master`. Keep `develop` as a preview branch if desired.
+5. Use these build settings:
 
-The current public endpoints do not require an API key. Upstream availability and response formats can change independently of this project.
+   | Setting | Value |
+   | --- | --- |
+   | Framework preset | Vite |
+   | Production branch | `master` |
+   | Build command | `npm run build` |
+   | Build output directory | `dist` |
+   | Root directory | `/` |
+   | Environment variables | None required |
+
+6. Save and deploy. Cloudflare detects the root-level `functions/` directory and deploys its API handlers alongside the static build. Keep `functions/` at the repository root; it must not be moved inside `public/` or `dist/`.
+7. After deployment, open the generated `*.pages.dev` URL and verify the dashboard plus the API smoke tests below.
+
+### Post-deployment smoke tests
+
+Replace `YOUR-PROJECT.pages.dev` with the domain Cloudflare assigns:
+
+```bash
+curl -i https://YOUR-PROJECT.pages.dev/
+curl -i https://YOUR-PROJECT.pages.dev/api/fpl/bootstrap-static
+curl -i https://YOUR-PROJECT.pages.dev/api/fpl/fixtures
+curl -i "https://YOUR-PROJECT.pages.dev/api/player-history?id=1"
+curl -i "https://YOUR-PROJECT.pages.dev/api/manager-profile?id=1"
+curl -i "https://YOUR-PROJECT.pages.dev/api/manager-history?id=1"
+curl -i "https://YOUR-PROJECT.pages.dev/api/league-standings?id=1&page=1"
+curl -i "https://YOUR-PROJECT.pages.dev/api/team-picks?id=1&gw=1"
+```
+
+The FPL API may legitimately return `404` for an example player, manager, league, or gameweek. The important checks are that the Pages Function is reached, the response is JSON, and invalid IDs return `400` without contacting the upstream API.
+
+No API key or Cloudflare secret is required by the application. Git integration and the first deployment must be authorized in your Cloudflare account; this repository change alone cannot create or authorize a Cloudflare project.
 
 ## Project structure
 
 ```text
 .
-├── api/
-│   ├── fpl/                  # Server-side FPL API proxy
-│   ├── team-picks.ts         # Manager team-picks proxy
-│   ├── player-history.ts     # Selected-player history proxy
-│   ├── manager-profile.ts    # Public manager profile proxy
-│   ├── manager-history.ts    # Public manager history proxy
-│   └── league-standings.ts   # Paginated classic league proxy
+├── api/                      # Retained Vercel migration fallback
+├── functions/
+│   ├── _shared/
+│   │   └── fplProxy.ts       # Shared FPL upstream proxy
+│   └── api/
+│       ├── fpl/[endpoint].ts
+│       ├── player-history.ts
+│       ├── manager-profile.ts
+│       ├── manager-history.ts
+│       ├── league-standings.ts
+│       └── team-picks.ts
+├── public/
+│   └── _routes.json          # Route /api/* through Pages Functions
 ├── docs/
 │   └── images/               # README product illustrations
 ├── src/
@@ -164,8 +205,8 @@ The current public endpoints do not require an API key. Upstream availability an
 │   ├── types/                # FPL and analytics domain types
 │   ├── App.tsx               # Dashboard views and state
 │   └── main.tsx              # React entry point
+├── tests/                    # Service and Pages Function tests
 ├── index.html
-├── package.json
 └── vite.config.ts
 ```
 
