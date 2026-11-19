@@ -65,7 +65,7 @@ test('loadDashboardData returns live data when both feeds are valid', async () =
 
   assert.equal(result.sourceStatus, 'live');
   assert.equal(result.isMock, false);
-  assert.equal(result.data, MOCK_FPL_DATA);
+  assert.deepEqual(result.data, MOCK_FPL_DATA);
   assert.deepEqual(result.fixtures, fixturePayload);
   assert.equal(result.sourceMessage, null);
 });
@@ -76,7 +76,7 @@ test('loadDashboardData preserves live players when the fixture feed fails', asy
 
   assert.equal(result.sourceStatus, 'partial-live');
   assert.equal(result.isMock, false);
-  assert.equal(result.data, MOCK_FPL_DATA);
+  assert.deepEqual(result.data, MOCK_FPL_DATA);
   assert.deepEqual(result.fixtures, []);
   assert.match(result.sourceMessage, /HTTP 503/);
 });
@@ -87,7 +87,7 @@ test('loadDashboardData falls back to clearly labelled mock data when bootstrap 
 
   assert.equal(result.sourceStatus, 'mock');
   assert.equal(result.isMock, true);
-  assert.equal(result.data, MOCK_FPL_DATA);
+  assert.deepEqual(result.data, MOCK_FPL_DATA);
   assert.ok(result.fixtures.length > 0);
   assert.match(result.sourceMessage, /demo data/i);
 });
