@@ -30,7 +30,7 @@ export default {
 
     if (url.pathname === '/api/fpl/bootstrap-static' || url.pathname === '/api/fpl/fixtures') {
       const endpoint = url.pathname.split('/').at(-1) ?? '';
-      return getFpl({ request, params: { endpoint } });
+      return getFpl({ params: { endpoint } });
     }
 
     const routes: Record<string, (context: { request: Request }) => Promise<Response>> = {
