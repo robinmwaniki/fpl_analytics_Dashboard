@@ -22,15 +22,18 @@ import { loadDashboardData } from './services/fplService';
 import CaptainPicker from './components/CaptainPicker';
 import MyTeam from './components/MyTeam';
 import ValueFinder from './components/ValueFinder';
+import PlayerHistoryPanel from './components/PlayerHistoryPanel';
+import ManagerAnalyticsPanel from './components/ManagerAnalyticsPanel';
 import { DIFFICULTY_STYLES, getStartGameweek, toFixtureCell } from './lib/fixtures';
 import { formatPrice } from './lib/format';
 
-type TabId = 'overview' | 'myteam' | 'explorer' | 'compare' | 'fdr' | 'captain' | 'value';
+type TabId = 'overview' | 'myteam' | 'manager' | 'explorer' | 'compare' | 'fdr' | 'captain' | 'value';
 type SortKey = 'total_points' | 'now_cost' | 'form' | 'goals_scored' | 'assists';
 
 const TABS: { id: TabId; label: string; icon: LucideIcon }[] = [
   { id: 'overview', label: 'Dashboard Overview', icon: Activity },
   { id: 'myteam', label: 'My Team', icon: UserRound },
+  { id: 'manager', label: 'Manager Analytics', icon: Trophy },
   { id: 'explorer', label: 'Player Explorer', icon: Search },
   { id: 'compare', label: 'Compare Players', icon: ArrowUpDown },
   { id: 'fdr', label: 'FDR Planner', icon: Shield },
@@ -44,6 +47,15 @@ const EXPLORER_ROW_LIMIT = 100;
 export default function App() {
   const [dashboard, setDashboard] = useState<DashboardData | null>(null);
   const [activeTab, setActiveTab] = useState<TabId>('overview');
+  const [reloadKey, setReloadKey] = useState(0);
+  const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+
+  const retryDataLoad = () => {
+    setLoadError(null);
+    setIsLoading(true);
+    setReloadKey((current) => current + 1);
+  };
 
   // Search & filters
   const [searchQuery, setSearchQuery] = useState('');
@@ -58,13 +70,23 @@ export default function App() {
 
   useEffect(() => {
     let cancelled = false;
-    loadDashboardData().then((result) => {
-      if (!cancelled) setDashboard(result);
-    });
+    loadDashboardData()
+      .then((result) => {
+        if (!cancelled) setDashboard(result);
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setLoadError('The dashboard could not load data. Check your connection and try again.');
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setIsLoading(false);
+      });
+
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [reloadKey]);
 
   useEffect(() => {
     if (!selectedPlayer) return;
@@ -140,10 +162,28 @@ export default function App() {
 
   if (!dashboard || !fplData) {
     return (
-      <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center text-white">
-        <RefreshCw className="w-10 h-10 animate-spin text-emerald-400 mb-4" />
-        <h2 className="text-xl font-bold">Loading FPL Intelligence Data...</h2>
-        <p className="text-slate-400 text-sm mt-1">Fetching live statistics and fixture difficulties</p>
+      <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center text-white px-4">
+        {isLoading ? (
+          <>
+            <RefreshCw className="w-10 h-10 animate-spin text-emerald-400 mb-4" />
+            <h2 className="text-xl font-bold">Loading FPL Intelligence Data...</h2>
+            <p className="text-slate-400 text-sm mt-1">Fetching live statistics and fixture difficulties</p>
+          </>
+        ) : (
+          <>
+            <CircleAlert className="w-10 h-10 text-amber-400 mb-4" />
+            <h2 className="text-xl font-bold">Unable to load the dashboard</h2>
+            <p className="text-slate-400 text-sm mt-2 text-center">{loadError ?? 'No dashboard data is available.'}</p>
+            <button
+              type="button"
+              onClick={retryDataLoad}
+              className="mt-5 inline-flex items-center gap-2 rounded-xl bg-emerald-500 px-4 py-2.5 text-sm font-bold text-slate-950 hover:bg-emerald-400 disabled:opacity-60"
+              disabled={isLoading}
+            >
+              <RefreshCw className="w-4 h-4" /> Retry
+            </button>
+          </>
+        )}
       </div>
     );
   }
@@ -175,13 +215,17 @@ export default function App() {
           </div>
 
           <div className="flex items-center gap-3">
-            {isMock ? (
-              <span className="px-3 py-1 rounded-full text-xs bg-amber-500/10 text-amber-400 border border-amber-500/20 flex items-center gap-1.5">
-                <CircleAlert className="w-3.5 h-3.5" /> Mock Data Mode
-              </span>
-            ) : (
+            {dashboard.sourceStatus === 'live' ? (
               <span className="px-3 py-1 rounded-full text-xs bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center gap-1.5">
                 <CircleCheck className="w-3.5 h-3.5" /> Live FPL API Linked
+              </span>
+            ) : dashboard.sourceStatus === 'partial-live' ? (
+              <span className="px-3 py-1 rounded-full text-xs bg-amber-500/10 text-amber-400 border border-amber-500/20 flex items-center gap-1.5">
+                <CircleAlert className="w-3.5 h-3.5" /> Partial Live Data
+              </span>
+            ) : (
+              <span className="px-3 py-1 rounded-full text-xs bg-amber-500/10 text-amber-400 border border-amber-500/20 flex items-center gap-1.5">
+                <CircleAlert className="w-3.5 h-3.5" /> Mock Data Mode
               </span>
             )}
           </div>
@@ -211,6 +255,29 @@ export default function App() {
       </header>
 
       <main className="max-w-7xl mx-auto px-4 pt-6">
+        {dashboard.sourceStatus !== 'live' && (
+          <div
+            role="status"
+            aria-live="polite"
+            className="mb-6 flex flex-col gap-3 rounded-2xl border border-amber-500/30 bg-amber-500/5 p-4 sm:flex-row sm:items-center sm:justify-between"
+          >
+            <div>
+              <p className="font-semibold text-amber-300">
+                {dashboard.sourceStatus === 'mock' ? 'Demo data is active' : 'Fixture analysis is unavailable'}
+              </p>
+              <p className="mt-1 text-sm text-slate-300">{dashboard.sourceMessage}</p>
+            </div>
+            <button
+              type="button"
+              onClick={retryDataLoad}
+              disabled={isLoading}
+              className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl border border-amber-400/40 px-4 py-2 text-sm font-semibold text-amber-200 hover:bg-amber-400/10 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              <RefreshCw className={isLoading ? 'h-4 w-4 animate-spin' : 'h-4 w-4'} />
+              {isLoading ? 'Retrying...' : 'Retry live data'}
+            </button>
+          </div>
+        )}
         {activeTab === 'overview' && (
           <div className="space-y-6">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -288,6 +355,8 @@ export default function App() {
             </div>
           </div>
         )}
+
+        {activeTab === 'manager' && <ManagerAnalyticsPanel />}
 
         {activeTab === 'explorer' && (
           <div className="space-y-6">
@@ -566,6 +635,12 @@ export default function App() {
                 <p className="text-xl font-extrabold text-purple-400">{selectedPlayer.selected_by_percent}%</p>
               </div>
             </div>
+
+            <PlayerHistoryPanel
+              key={selectedPlayer.id}
+              playerId={selectedPlayer.id}
+              teamMap={teamMap}
+            />
 
             {selectedPlayer.news && (
               <p className="text-xs text-amber-400 bg-amber-500/10 border border-amber-500/20 rounded-xl p-3 mb-6">
