@@ -27,6 +27,7 @@ The bundled fallback dataset is synthetic demo data. It intentionally does not m
 - `tests/fixtures.test.mjs`: fixture transformation, gameweek selection, filtering and ordering.
 - `tests/fplService.test.mjs`: bootstrap and fixture payload validation, live/partial/mock states, malformed JSON, HTTP failures and timeouts.
 - `tests/playerHistoryService.test.mjs`: selected-player history validation, request scoping, not-found responses, malformed payloads and network failures.
+- `tests/managerAnalyticsService.test.mjs`: public manager profile/history validation, partial history failures, league standings validation and pagination parameters.
 
 Tests use Node's `node:test` and `node:assert/strict` APIs. Keep tests deterministic: do not make live FPL API requests from unit tests.
 

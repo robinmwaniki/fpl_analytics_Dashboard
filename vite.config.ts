@@ -29,6 +29,36 @@ export default defineConfig({
         },
         headers: { 'User-Agent': USER_AGENT },
       },
+      // Public manager profile proxy: /api/manager-profile?id=123
+      '/api/manager-profile': {
+        target: FPL_ORIGIN,
+        changeOrigin: true,
+        rewrite: (path) => {
+          const params = new URL(path, 'http://localhost').searchParams;
+          return '/api/entry/' + params.get('id') + '/';
+        },
+        headers: { 'User-Agent': USER_AGENT },
+      },
+      // Public manager season-history proxy: /api/manager-history?id=123
+      '/api/manager-history': {
+        target: FPL_ORIGIN,
+        changeOrigin: true,
+        rewrite: (path) => {
+          const params = new URL(path, 'http://localhost').searchParams;
+          return '/api/entry/' + params.get('id') + '/history/';
+        },
+        headers: { 'User-Agent': USER_AGENT },
+      },
+      // Paginated public classic-league standings proxy.
+      '/api/league-standings': {
+        target: FPL_ORIGIN,
+        changeOrigin: true,
+        rewrite: (path) => {
+          const params = new URL(path, 'http://localhost').searchParams;
+          return '/api/leagues-classic/' + params.get('id') + '/standings/?page_standings=' + (params.get('page') || '1');
+        },
+        headers: { 'User-Agent': USER_AGENT },
+      },
       // Mirrors api/team-picks.ts:
       // /api/team-picks?id=1&gw=5 -> https://fantasy.premierleague.com/api/entry/1/event/5/picks/
       '/api/team-picks': {

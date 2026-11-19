@@ -23,15 +23,17 @@ import CaptainPicker from './components/CaptainPicker';
 import MyTeam from './components/MyTeam';
 import ValueFinder from './components/ValueFinder';
 import PlayerHistoryPanel from './components/PlayerHistoryPanel';
+import ManagerAnalyticsPanel from './components/ManagerAnalyticsPanel';
 import { DIFFICULTY_STYLES, getStartGameweek, toFixtureCell } from './lib/fixtures';
 import { formatPrice } from './lib/format';
 
-type TabId = 'overview' | 'myteam' | 'explorer' | 'compare' | 'fdr' | 'captain' | 'value';
+type TabId = 'overview' | 'myteam' | 'manager' | 'explorer' | 'compare' | 'fdr' | 'captain' | 'value';
 type SortKey = 'total_points' | 'now_cost' | 'form' | 'goals_scored' | 'assists';
 
 const TABS: { id: TabId; label: string; icon: LucideIcon }[] = [
   { id: 'overview', label: 'Dashboard Overview', icon: Activity },
   { id: 'myteam', label: 'My Team', icon: UserRound },
+  { id: 'manager', label: 'Manager Analytics', icon: Trophy },
   { id: 'explorer', label: 'Player Explorer', icon: Search },
   { id: 'compare', label: 'Compare Players', icon: ArrowUpDown },
   { id: 'fdr', label: 'FDR Planner', icon: Shield },
@@ -353,6 +355,8 @@ export default function App() {
             </div>
           </div>
         )}
+
+        {activeTab === 'manager' && <ManagerAnalyticsPanel />}
 
         {activeTab === 'explorer' && (
           <div className="space-y-6">
