@@ -266,7 +266,7 @@ export default function App() {
             </div>
             <button
               type="button"
-              onClick={() => setReloadKey((current) => current + 1)}
+              onClick={retryDataLoad}
               disabled={isLoading}
               className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl border border-amber-400/40 px-4 py-2 text-sm font-semibold text-amber-200 hover:bg-amber-400/10 disabled:cursor-not-allowed disabled:opacity-60"
             >
