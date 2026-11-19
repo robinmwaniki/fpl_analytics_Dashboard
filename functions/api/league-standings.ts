@@ -1,4 +1,4 @@
-import { invalidParameters, proxyFpl } from '../_shared/fplProxy';
+import { invalidParameters, proxyFpl } from '../_shared/fplProxy.js';
 
 interface PagesContext {
   request: Request;
