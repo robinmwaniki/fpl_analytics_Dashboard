@@ -139,7 +139,6 @@ The current public endpoints do not require an API key. Upstream availability an
 ├── src/
 │   ├── components/      # Dashboard UI components
 │   ├── services/        # FPL, manager and player-history data access
-│   ├── components/      # Dashboard UI components
 │   ├── types/           # FPL and analytics domain types
 │   ├── App.tsx          # Dashboard views and state
 │   └── main.tsx         # React entry point
