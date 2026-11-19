@@ -18,6 +18,17 @@ export default defineConfig({
         rewrite: (path) => path.replace(/^\/api\/fpl\/([^/?]+)\/?.*$/, '/api/$1/'),
         headers: { 'User-Agent': USER_AGENT },
       },
+      // Mirrors api/player-history.ts:
+      // /api/player-history?id=123 -> /api/element-summary/123/
+      '/api/player-history': {
+        target: FPL_ORIGIN,
+        changeOrigin: true,
+        rewrite: (path) => {
+          const params = new URL(path, 'http://localhost').searchParams;
+          return '/api/element-summary/' + params.get('id') + '/';
+        },
+        headers: { 'User-Agent': USER_AGENT },
+      },
       // Mirrors api/team-picks.ts:
       // /api/team-picks?id=1&gw=5 -> https://fantasy.premierleague.com/api/entry/1/event/5/picks/
       '/api/team-picks': {
