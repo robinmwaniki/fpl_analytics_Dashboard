@@ -11,7 +11,9 @@
     "build": "tsc -b && vite build",
     "typecheck": "tsc -b",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test": "npx --yes --package=tsx@4.20.6 -- node --import tsx --test tests/analytics.test.mjs tests/fixtures.test.mjs",
+    "test:watch": "npx --yes --package=tsx@4.20.6 -- node --import tsx --test --watch tests/analytics.test.mjs tests/fixtures.test.mjs"
   },
   "dependencies": {
     "lucide-react": "^1.37.0",
