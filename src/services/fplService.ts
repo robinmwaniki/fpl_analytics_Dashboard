@@ -74,44 +74,171 @@ function buildMockFixtures(): Fixture[] {
   return fixtures;
 }
 
-function isFPLData(value: unknown): value is FPLData {
-  if (typeof value !== 'object' || value === null) return false;
-  const v = value as Partial<FPLData>;
+
+const API_TIMEOUT_MS = 12_000;
+
+type ApiResult =
+  | { ok: true; data: unknown }
+  | { ok: false; message: string };
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null && !Array.isArray(value);
+
+const isFiniteNumber = (value: unknown): value is number =>
+  typeof value === 'number' && Number.isFinite(value);
+
+const isString = (value: unknown): value is string => typeof value === 'string';
+
+/**
+ * Validate the subset of the bootstrap payload consumed by the dashboard.
+ * Unknown extra fields are allowed so upstream additions remain backward compatible.
+ */
+export function isFPLData(value: unknown): value is FPLData {
+  if (!isRecord(value)) return false;
+  const { elements, teams, events, element_types: elementTypes } = value;
+
   return (
-    Array.isArray(v.elements) &&
-    Array.isArray(v.teams) &&
-    Array.isArray(v.events) &&
-    Array.isArray(v.element_types)
+    Array.isArray(elements) &&
+    elements.length > 0 &&
+    elements.every((player) =>
+      isRecord(player) &&
+      isFiniteNumber(player.id) &&
+      isString(player.first_name) &&
+      isString(player.second_name) &&
+      isString(player.web_name) &&
+      isFiniteNumber(player.team) &&
+      isFiniteNumber(player.element_type) &&
+      isFiniteNumber(player.now_cost) &&
+      isFiniteNumber(player.total_points) &&
+      isFiniteNumber(player.goals_scored) &&
+      isFiniteNumber(player.assists) &&
+      isFiniteNumber(player.clean_sheets) &&
+      isString(player.form) &&
+      isString(player.selected_by_percent) &&
+      isFiniteNumber(player.bonus) &&
+      isFiniteNumber(player.bps) &&
+      isFiniteNumber(player.minutes) &&
+      isString(player.ict_index) &&
+      isString(player.ep_next) &&
+      isString(player.news) &&
+      isString(player.status)
+    ) &&
+    Array.isArray(teams) &&
+    teams.length > 0 &&
+    teams.every((team) =>
+      isRecord(team) &&
+      isFiniteNumber(team.id) &&
+      isString(team.name) &&
+      isString(team.short_name) &&
+      isFiniteNumber(team.strength)
+    ) &&
+    Array.isArray(events) &&
+    events.every((event) =>
+      isRecord(event) &&
+      isFiniteNumber(event.id) &&
+      isString(event.name) &&
+      typeof event.is_current === 'boolean' &&
+      typeof event.is_next === 'boolean' &&
+      typeof event.finished === 'boolean'
+    ) &&
+    Array.isArray(elementTypes) &&
+    elementTypes.length > 0 &&
+    elementTypes.every((elementType) =>
+      isRecord(elementType) &&
+      isFiniteNumber(elementType.id) &&
+      isString(elementType.singular_name_short)
+    )
   );
 }
 
-async function getJson(endpoint: string): Promise<unknown> {
+/** Reject malformed fixtures before they reach FDR calculations and rendering. */
+export function isFixtureArray(value: unknown): value is Fixture[] {
+  return (
+    Array.isArray(value) &&
+    value.every((fixture) =>
+      isRecord(fixture) &&
+      isFiniteNumber(fixture.id) &&
+      (fixture.event === null || isFiniteNumber(fixture.event)) &&
+      isFiniteNumber(fixture.team_h) &&
+      isFiniteNumber(fixture.team_a) &&
+      isFiniteNumber(fixture.team_h_difficulty) &&
+      isFiniteNumber(fixture.team_a_difficulty) &&
+      (fixture.kickoff_time === null || isString(fixture.kickoff_time)) &&
+      typeof fixture.finished === 'boolean'
+    )
+  );
+}
+
+async function getJson(endpoint: string): Promise<ApiResult> {
   try {
-    const res = await fetch(`${API_BASE}/${endpoint}`);
-    if (!res.ok) return null;
-    return await res.json();
-  } catch {
-    return null;
+    const response = await fetch(API_BASE + '/' + endpoint, {
+      headers: { Accept: 'application/json' },
+      signal: AbortSignal.timeout(API_TIMEOUT_MS),
+    });
+
+    if (!response.ok) {
+      return { ok: false, message: 'The FPL service returned HTTP ' + response.status + ' for ' + endpoint + '.' };
+    }
+
+    try {
+      return { ok: true, data: await response.json() };
+    } catch {
+      return { ok: false, message: 'The FPL service returned invalid JSON for ' + endpoint + '.' };
+    }
+  } catch (error) {
+    const timedOut = error instanceof DOMException && error.name === 'TimeoutError';
+    return {
+      ok: false,
+      message: timedOut
+        ? 'The FPL request for ' + endpoint + ' timed out. Please try again.'
+        : 'The FPL service is currently unreachable for ' + endpoint + '. Please try again.',
+    };
   }
 }
 
 /**
- * Loads live FPL data through the same-origin proxy. Falls back to bundled mock
- * data if the API is unavailable (for example during the FPL season rollover).
+ * Load bootstrap and fixture feeds independently. A fixture outage should not
+ * discard valid player data, and malformed upstream payloads never reach the UI.
  */
 export async function loadDashboardData(): Promise<DashboardData> {
-  const [bootstrap, fixtures] = await Promise.all([
+  const [bootstrapResult, fixtureResult] = await Promise.all([
     getJson('bootstrap-static'),
     getJson('fixtures'),
   ]);
 
-  if (isFPLData(bootstrap)) {
+  if (!bootstrapResult.ok || !isFPLData(bootstrapResult.data)) {
+    const reason = bootstrapResult.ok
+      ? 'The FPL bootstrap response was incomplete or had an unexpected format.'
+      : bootstrapResult.message;
+
     return {
-      data: bootstrap,
-      fixtures: Array.isArray(fixtures) ? (fixtures as Fixture[]) : [],
-      isMock: false,
+      data: MOCK_FPL_DATA,
+      fixtures: buildMockFixtures(),
+      isMock: true,
+      sourceStatus: 'mock',
+      sourceMessage: reason + ' Showing illustrative demo data instead of live statistics.',
     };
   }
 
-  return { data: MOCK_FPL_DATA, fixtures: buildMockFixtures(), isMock: true };
+  if (!fixtureResult.ok || !isFixtureArray(fixtureResult.data)) {
+    const reason = fixtureResult.ok
+      ? 'The FPL fixtures response was incomplete or had an unexpected format.'
+      : fixtureResult.message;
+
+    return {
+      data: bootstrapResult.data,
+      fixtures: [],
+      isMock: false,
+      sourceStatus: 'partial-live',
+      sourceMessage: reason + ' Player statistics are live, but fixture analysis is temporarily unavailable.',
+    };
+  }
+
+  return {
+    data: bootstrapResult.data,
+    fixtures: fixtureResult.data,
+    isMock: false,
+    sourceStatus: 'live',
+    sourceMessage: null,
+  };
 }
