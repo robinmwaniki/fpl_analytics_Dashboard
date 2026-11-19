@@ -1,4 +1,4 @@
-import { proxyFpl } from '../../_shared/fplProxy';
+import { proxyFpl } from '../../_shared/fplProxy.js';
 
 interface PagesContext {
   params: { endpoint?: string };
