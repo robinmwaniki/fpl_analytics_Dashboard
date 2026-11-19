@@ -23,6 +23,7 @@ The test command downloads the pinned `tsx@4.20.6` runner through `npx` when it 
 
 - `tests/analytics.test.mjs`: player scoring, value calculations, numeric parsing and availability helpers.
 - `tests/fixtures.test.mjs`: fixture transformation, gameweek selection, filtering and ordering.
+- `tests/fplService.test.mjs`: bootstrap and fixture payload validation, live/partial/mock states, malformed JSON, HTTP failures and timeouts.
 
 Tests use Node's `node:test` and `node:assert/strict` APIs. Keep tests deterministic: do not make live FPL API requests from unit tests.
 
