@@ -158,7 +158,7 @@ Cloudflare Pages is the primary production target. The repository is prepared fo
    | Root directory | `/` |
    | Environment variables | None required |
 
-6. Save and deploy. Cloudflare detects the root-level `functions/` directory and deploys its API handlers alongside the static build.
+6. Save and deploy. Cloudflare detects the root-level `functions/` directory and deploys its API handlers alongside the static build. Keep `functions/` at the repository root; it must not be moved inside `public/` or `dist/`.
 7. After deployment, open the generated `*.pages.dev` URL and verify the dashboard plus the API smoke tests below.
 
 ### Post-deployment smoke tests
