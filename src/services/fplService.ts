@@ -4,13 +4,16 @@ import type { DashboardData, FPLData, Fixture } from '../types/fpl';
 // and a Vite dev-server proxy locally (vite.config.ts).
 const API_BASE = '/api/fpl';
 
+// A synthetic 38-round sample season. These events are never presented as the live FPL gameweek.
+const DEMO_GAMEWEEK_COUNT = 38;
+
 export const MOCK_FPL_DATA: FPLData = {
-  events: Array.from({ length: 38 }, (_, i) => ({
+  events: Array.from({ length: DEMO_GAMEWEEK_COUNT }, (_, i) => ({
     id: i + 1,
-    name: `Gameweek ${i + 1}`,
-    is_current: i + 1 === 8,
-    is_next: i + 1 === 9,
-    finished: i + 1 < 8,
+    name: `Demo Gameweek ${i + 1}`,
+    is_current: false,
+    is_next: false,
+    finished: false,
   })),
   element_types: [
     { id: 1, singular_name_short: 'GKP' },
@@ -44,7 +47,7 @@ const MOCK_FIXTURE_WINDOW = 5;
 
 /** Deterministic round-robin schedule so the FDR view works offline. */
 function buildMockFixtures(): Fixture[] {
-  const currentEvent = MOCK_FPL_DATA.events.find((e) => e.is_current)?.id ?? 1;
+  const firstDemoEvent = MOCK_FPL_DATA.events.find((event) => !event.finished)?.id ?? 1;
   const teams = MOCK_FPL_DATA.teams;
   const [anchor, ...rest] = teams;
   const fixtures: Fixture[] = [];
@@ -60,7 +63,7 @@ function buildMockFixtures(): Fixture[] {
 
       fixtures.push({
         id: round * 100 + i + 1,
-        event: currentEvent + 1 + round,
+        event: firstDemoEvent + round,
         team_h: home.id,
         team_a: away.id,
         team_h_difficulty: away.strength,

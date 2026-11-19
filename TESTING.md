@@ -19,6 +19,8 @@ npm run build
 
 The test command downloads the pinned `tsx@4.20.6` runner through `npx` when it is not already available. Application dependencies remain locked by `package-lock.json`.
 
+The bundled fallback dataset is synthetic demo data. It intentionally does not mark a current or next gameweek; its generated fixture window starts at the first unfinished demo event. Never use fallback values as current FPL facts.
+
 ## Test layout
 
 - `tests/analytics.test.mjs`: player scoring, value calculations, numeric parsing and availability helpers.
