@@ -1,5 +1,6 @@
 import test, { afterEach } from 'node:test';
 import assert from 'node:assert/strict';
+import { getStartGameweek } from '../src/lib/fixtures.ts';
 import {
   isFPLData,
   isFixtureArray,
@@ -116,4 +117,21 @@ test('loadDashboardData reports request timeouts without throwing', async () => 
   const result = await loadDashboardData();
   assert.equal(result.sourceStatus, 'mock');
   assert.match(result.sourceMessage, /timed out/i);
+});
+
+test('demo events never claim to be the current or next live gameweek', () => {
+  assert.equal(MOCK_FPL_DATA.events.length, 38);
+  assert.equal(MOCK_FPL_DATA.events.every((event) => !event.is_current && !event.is_next), true);
+  assert.equal(MOCK_FPL_DATA.events.every((event) => !event.finished), true);
+  assert.equal(MOCK_FPL_DATA.events[0].name, 'Demo Gameweek 1');
+  assert.equal(getStartGameweek(MOCK_FPL_DATA.events), 1);
+});
+
+test('generated demo fixtures start at the first unfinished demo gameweek', async () => {
+  mockFetch({ bootstrapStatus: 503 });
+  const result = await loadDashboardData();
+  const gameweeks = [...new Set(result.fixtures.map((fixture) => fixture.event))].sort((a, b) => a - b);
+
+  assert.deepEqual(gameweeks, [1, 2, 3, 4, 5]);
+  assert.equal(result.sourceStatus, 'mock');
 });
