@@ -65,4 +65,6 @@ export interface DashboardData {
   data: FPLData;
   fixtures: Fixture[];
   isMock: boolean;
+  sourceStatus: 'live' | 'partial-live' | 'mock';
+  sourceMessage: string | null;
 }
