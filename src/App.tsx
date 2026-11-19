@@ -48,6 +48,12 @@ export default function App() {
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
 
+  const retryDataLoad = () => {
+    setLoadError(null);
+    setIsLoading(true);
+    setReloadKey((current) => current + 1);
+  };
+
   // Search & filters
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedTeam, setSelectedTeam] = useState<number | 'all'>('all');
@@ -61,9 +67,6 @@ export default function App() {
 
   useEffect(() => {
     let cancelled = false;
-    setIsLoading(true);
-    setLoadError(null);
-
     loadDashboardData()
       .then((result) => {
         if (!cancelled) setDashboard(result);
@@ -170,7 +173,7 @@ export default function App() {
             <p className="text-slate-400 text-sm mt-2 text-center">{loadError ?? 'No dashboard data is available.'}</p>
             <button
               type="button"
-              onClick={() => setReloadKey((current) => current + 1)}
+              onClick={retryDataLoad}
               className="mt-5 inline-flex items-center gap-2 rounded-xl bg-emerald-500 px-4 py-2.5 text-sm font-bold text-slate-950 hover:bg-emerald-400 disabled:opacity-60"
               disabled={isLoading}
             >
