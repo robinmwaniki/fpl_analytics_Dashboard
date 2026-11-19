@@ -292,7 +292,7 @@ export default function ManagerAnalyticsPanel() {
                   <button
                     type="button"
                     onClick={() => selectedLeagueId && void loadLeaguePage(selectedLeagueId, Math.max(1, page - 1))}
-                    disabled={page <= 1 || standings.status === 'loading'}
+                    disabled={page <= 1}
                     className="inline-flex items-center gap-1 rounded-lg border border-slate-700 px-3 py-2 text-xs font-semibold text-slate-300 hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-40"
                   >
                     <ArrowLeft className="h-3.5 w-3.5" /> Previous
@@ -301,7 +301,7 @@ export default function ManagerAnalyticsPanel() {
                   <button
                     type="button"
                     onClick={() => selectedLeagueId && void loadLeaguePage(selectedLeagueId, page + 1)}
-                    disabled={!standings.data.has_next || standings.status === 'loading'}
+                    disabled={!standings.data.has_next}
                     className="inline-flex items-center gap-1 rounded-lg border border-slate-700 px-3 py-2 text-xs font-semibold text-slate-300 hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-40"
                   >
                     Next <ArrowRight className="h-3.5 w-3.5" />
