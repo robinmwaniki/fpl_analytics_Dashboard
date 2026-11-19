@@ -22,6 +22,7 @@ import { loadDashboardData } from './services/fplService';
 import CaptainPicker from './components/CaptainPicker';
 import MyTeam from './components/MyTeam';
 import ValueFinder from './components/ValueFinder';
+import PlayerHistoryPanel from './components/PlayerHistoryPanel';
 import { DIFFICULTY_STYLES, getStartGameweek, toFixtureCell } from './lib/fixtures';
 import { formatPrice } from './lib/format';
 
@@ -630,6 +631,12 @@ export default function App() {
                 <p className="text-xl font-extrabold text-purple-400">{selectedPlayer.selected_by_percent}%</p>
               </div>
             </div>
+
+            <PlayerHistoryPanel
+              key={selectedPlayer.id}
+              playerId={selectedPlayer.id}
+              teamMap={teamMap}
+            />
 
             {selectedPlayer.news && (
               <p className="text-xs text-amber-400 bg-amber-500/10 border border-amber-500/20 rounded-xl p-3 mb-6">
